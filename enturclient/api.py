@@ -51,6 +51,8 @@ class EnturPublicTransportData:
 
     def _expand_all_quays(self) -> None:
         """Find all quays from stop places."""
+        if not self.stops_string:
+            return
 
         query = Template(GRAPHQL_STOP_TO_QUAY_TEMPLATE).substitute(
             stops=self.stops_string,
