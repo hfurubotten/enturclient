@@ -22,7 +22,7 @@ class EnturPublicTransportData:
                  stops: list,
                  quays: list,
                  expand_quays: bool,
-                 line_whitelist: list):
+                 line_whitelist: list = None):
         """Initialize the data object."""
         self._client_name = client_name
         self._data = {}
