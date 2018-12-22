@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="enturclient",
-    version="0.1.2",
+    version="0.1.3",
     author="Heine Furubotten",
     description="An API client for public transport data from Entur.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/hfurubotten/enturclient",
-    license = 'MIT',
+    license='MIT',
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -16,8 +16,8 @@ GRAPHQL_STOP_TO_QUAY_TEMPLATE = """{
           timeRange: 172100, 
           numberOfDepartures: 1){
         destinationDisplay {
-        	frontText
-      	}
+          frontText
+        }
       }
     }
   }
@@ -28,8 +28,8 @@ GRAPHQL_STOP_TEMPLATE = """
     id
     name
     estimatedCalls(
+        $additionalOptions
         startTime: \"$time\",
-        timeRange: 72100,
         numberOfDepartures: 2) {
       realtime
       aimedArrivalTime
@@ -64,8 +64,8 @@ GRAPHQL_QUAY_TEMPLATE = """
     latitude
     longitude
     estimatedCalls(
+        $additionalOptions
         startTime: \"$time\",
-        timeRange: 72100,
         numberOfDepartures: 2) {
       realtime
       aimedArrivalTime

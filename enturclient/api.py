@@ -1,21 +1,28 @@
 """
 Real-time information about public transport departures in Norway.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from string import Template
 
 import requests
+import logging
 
 from enturclient.queries import *
 from enturclient.consts import *
 
 RESOURCE = 'https://api.entur.org/journeyplanner/2.0/index/graphql'
+_LOGGER = logging.getLogger(__name__)
 
 
 class EnturPublicTransportData:
     """The Class for handling the data retrieval."""
 
-    def __init__(self, client_name: str, stops: list, quays: list, expand_quays: bool):
+    def __init__(self,
+                 client_name: str,
+                 stops: list,
+                 quays: list,
+                 expand_quays: bool,
+                 line_whitelist: list):
         """Initialize the data object."""
         self._client_name = client_name
         self._data = {}
@@ -34,6 +41,13 @@ class EnturPublicTransportData:
         for item in quays:
             self.info[item] = {}
 
+        if line_whitelist:
+            whitelist_array = "\"" + "\",\"".join(line_whitelist) + "\""
+            whitelist_string = LINE_WHITELIST_FORMAT.format(whitelist_array)
+            self.additional_search_options = whitelist_string
+        else: 
+            self.additional_search_options = ""
+
         self.template_string = "{\n"
         if self.stops:
             self.template_string += GRAPHQL_STOP_TEMPLATE
@@ -44,10 +58,10 @@ class EnturPublicTransportData:
 
     def all_stop_places_quays(self) -> list:
         """Get all stop places and quays"""
-        all = self.stops.copy()
+        all_places = self.stops.copy()
         for quay in self.quays:
-            all.append(quay)
-        return all
+            all_places.append(quay)
+        return all_places
 
     def _expand_all_quays(self) -> None:
         """Find all quays from stop places."""
@@ -83,7 +97,9 @@ class EnturPublicTransportData:
         query = self.template.substitute(
             stops=self.stops_string,
             quays=self.quays_string,
-            time=datetime.utcnow().strftime("%Y-%m-%dT%XZ"))
+            time=datetime.utcnow().strftime("%Y-%m-%dT%XZ"),
+            additionalOptions=self.additional_search_options)
+
         headers = {'ET-Client-Name': self._client_name}
         response = requests.post(
             RESOURCE,
@@ -106,12 +122,12 @@ class EnturPublicTransportData:
                 self._process_place(stop, False)
 
         if 'quays' in self._data:
-            for quey in self._data['quays']:
-                self._process_place(quey, True)
+            for quay in self._data['quays']:
+                self._process_place(quay, True)
 
-    def get_stop_info(self, id: str) -> dict:
+    def get_stop_info(self, stop_id: str) -> dict:
         """Get all information about a stop."""
-        return self.info[id]
+        return self.info[stop_id]
 
     def _process_place(self, place: dict, is_platform: bool) -> None:
         """Extract information from place dictionary."""
@@ -140,23 +156,33 @@ class EnturPublicTransportData:
             attributes[ATTR_EXPECTED_AT] = call['expectedDepartureTime']
             attributes[ATTR_REALTIME] = call['realtime']
             attributes[ATTR_ROUTE] = self._get_route_text(call)
+            attributes[ATTR_ROUTE_ID] = self._get_route_id(call)
             attributes[ATTR_DELAY] = self._get_call_delay(call)
         if len(place['estimatedCalls']) > 1:
             call = place['estimatedCalls'][1]
             attributes[ATTR_NEXT_UP_AT] = call['expectedDepartureTime']
             attributes[ATTR_NEXT_UP_REALTIME] = call['realtime']
             attributes[ATTR_NEXT_UP_ROUTE] = self._get_route_text(call)
+            attributes[ATTR_NEXT_UP_ROUTE_ID] = self._get_route_id(call)
             attributes[ATTR_NEXT_UP_DELAY] = self._get_call_delay(call)
         info[ATTR] = attributes
         self.info[place_id] = info
 
-    def _get_transport_mode(self, place: dict) -> str:
+    @staticmethod
+    def _get_route_id(call: dict) -> str:
+        return call['serviceJourney']['journeyPattern']['line']['id']
+
+    @staticmethod
+    def _get_transport_mode(place: dict) -> str:
         if place['estimatedCalls']:
-            return place['estimatedCalls'][0]['serviceJourney']['journeyPattern']['line']['transportMode']
+            first = place['estimatedCalls'][0]
+            line = first['serviceJourney']['journeyPattern']['line']
+            return line['transportMode']
         else:
             return UNKNOWN
 
-    def _get_route_text(self, call: dict) -> str:
+    @staticmethod
+    def _get_route_text(call: dict) -> str:
         return call['serviceJourney']['journeyPattern']['line']['publicCode'] \
             + " " + call['destinationDisplay']['frontText']
 
@@ -165,7 +191,8 @@ class EnturPublicTransportData:
             call['expectedDepartureTime'],
             call['aimedDepartureTime'])
 
-    def _time_diff_in_minutes(self, timestamp1: str, timestamp2: str) -> str:
+    @staticmethod
+    def _time_diff_in_minutes(timestamp1: str, timestamp2: str) -> str:
         """Get the time in minutes from a timestamp.
 
         The timestamp should be in the format
@@ -181,4 +208,3 @@ class EnturPublicTransportData:
         diff = time1 - time2
 
         return str(int(diff.total_seconds() / 60))
-
