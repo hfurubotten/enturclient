@@ -2,7 +2,6 @@
 Real-time information about public transport departures in Norway.
 """
 from datetime import datetime
-from string import Template
 
 import requests
 import logging
@@ -22,18 +21,20 @@ class EnturPublicTransportData:
                  stops: list,
                  quays: list,
                  expand_quays: bool,
-                 line_whitelist: list = None):
+                 line_whitelist: list = None,
+                 omit_non_boarding: bool = True,
+                 number_of_departures: int = 2):
         """Initialize the data object."""
         self._client_name = client_name
         self._data = {}
         self.stops = stops
-        self.stops_string = "\"" + "\",\"".join(stops) + "\""
+        self.omit_non_boarding = omit_non_boarding
+        self.line_whitelist = line_whitelist
+        self.number_of_departures = number_of_departures
 
         self.quays = quays
         if expand_quays:
             self._expand_all_quays()
-
-        self.quays_string = "\"" + "\",\"".join(self.quays) + "\""
 
         self.info = {}
         for item in stops:
@@ -41,20 +42,17 @@ class EnturPublicTransportData:
         for item in quays:
             self.info[item] = {}
 
-        if line_whitelist:
-            whitelist_array = "\"" + "\",\"".join(line_whitelist) + "\""
-            whitelist_string = LINE_WHITELIST_FORMAT.format(whitelist_array)
-            self.additional_search_options = whitelist_string
-        else: 
-            self.additional_search_options = ""
-
-        self.template_string = "{\n"
+        self.query_string = """query(
+            $stops: [String],
+            $quays: [String],
+            $whitelist: InputWhiteListed,
+            $numberOfDepartures: Int = 2,
+            $omitNonBoarding: Boolean = true){\n"""
         if self.stops:
-            self.template_string += GRAPHQL_STOP_TEMPLATE
+            self.query_string += GRAPHQL_STOP_TEMPLATE
         if self.quays:
-            self.template_string += GRAPHQL_QUAY_TEMPLATE
-        self.template_string += "}"
-        self.template = Template(self.template_string)
+            self.query_string += GRAPHQL_QUAY_TEMPLATE
+        self.query_string += "}"
 
     def all_stop_places_quays(self) -> list:
         """Get all stop places and quays"""
@@ -68,13 +66,16 @@ class EnturPublicTransportData:
         if not self.stops:
             return
 
-        query = Template(GRAPHQL_STOP_TO_QUAY_TEMPLATE).substitute(
-            stops=self.stops_string,
-            time=datetime.utcnow().strftime("%Y-%m-%dT%XZ"))
         headers = {'ET-Client-Name': self._client_name}
         response = requests.post(
             RESOURCE,
-            json={"query": query},
+            json={
+                'query': GRAPHQL_STOP_TO_QUAY_TEMPLATE,
+                'variables': {
+                    'stops': self.stops,
+                    'omitNonBoarding': self.omit_non_boarding
+                }
+            },
             timeout=10,
             headers=headers)
 
@@ -94,16 +95,21 @@ class EnturPublicTransportData:
 
     def update(self) -> None:
         """Get the latest data from api.entur.org."""
-        query = self.template.substitute(
-            stops=self.stops_string,
-            quays=self.quays_string,
-            time=datetime.utcnow().strftime("%Y-%m-%dT%XZ"),
-            additionalOptions=self.additional_search_options)
-
         headers = {'ET-Client-Name': self._client_name}
         response = requests.post(
             RESOURCE,
-            json={"query": query},
+            json={
+                'query': self.query_string,
+                'variables': {
+                    'stops': self.stops,
+                    'quays': self.quays,
+                    'whiteListed': {
+                        'lines': self.line_whitelist
+                    },
+                    'numberOfDepartures': self.number_of_departures,
+                    'omitNonBoarding': self.omit_non_boarding
+                }
+            },
             timeout=10,
             headers=headers)
 
@@ -166,6 +172,7 @@ class EnturPublicTransportData:
             attributes[ATTR_NEXT_UP_ROUTE_ID] = self._get_route_id(call)
             attributes[ATTR_NEXT_UP_DELAY] = self._get_call_delay(call)
         info[ATTR] = attributes
+
         self.info[place_id] = info
 
     @staticmethod
@@ -179,7 +186,7 @@ class EnturPublicTransportData:
             line = first['serviceJourney']['journeyPattern']['line']
             return line['transportMode']
         else:
-            return UNKNOWN
+            return None
 
     @staticmethod
     def _get_route_text(call: dict) -> str:
@@ -199,9 +206,9 @@ class EnturPublicTransportData:
         year-month-yearThour:minute:second+timezone
         """
         if timestamp1 is None:
-            return UNKNOWN
+            return None
         if timestamp2 is None:
-            return UNKNOWN
+            return None
 
         time1 = datetime.strptime(timestamp1, "%Y-%m-%dT%H:%M:%S%z")
         time2 = datetime.strptime(timestamp2, "%Y-%m-%dT%H:%M:%S%z")

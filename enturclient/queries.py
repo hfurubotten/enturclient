@@ -1,20 +1,15 @@
-GRAPHQL_STOP_TO_QUAY_TEMPLATE = """{
-  stopPlaces(ids: [$stops]) {
+GRAPHQL_STOP_TO_QUAY_TEMPLATE = """
+query(
+    $stops: [String]!, 
+    $omitNonBoarding: Boolean = true){
+  stopPlaces(ids: $stops) {
     id
-    name
-    latitude
-    longitude
-    quays{
+    quays(filterByInUse: true){
       id
-      name
-      publicCode
-      description
-      latitude
-      longitude
       estimatedCalls(
-          startTime:\"$time\", 
           timeRange: 172100, 
-          numberOfDepartures: 1){
+          numberOfDepartures: 1,
+          omitNonBoarding: $omitNonBoarding){
         destinationDisplay {
           frontText
         }
@@ -24,22 +19,19 @@ GRAPHQL_STOP_TO_QUAY_TEMPLATE = """{
 }
 """
 GRAPHQL_STOP_TEMPLATE = """
-  stopPlaces(ids: [$stops]) {
+  stopPlaces(ids: $stops) {
     id
     name
     estimatedCalls(
-        $additionalOptions
-        startTime: \"$time\",
-        numberOfDepartures: 2) {
+        whiteListed: $whitelist,
+        omitNonBoarding: $omitNonBoarding,
+        numberOfDepartures: $numberOfDepartures) {
       realtime
       aimedArrivalTime
       aimedDepartureTime
       expectedArrivalTime
       expectedDepartureTime
       requestStop
-      notices {
-        text
-      }
       destinationDisplay {
         frontText
       }
@@ -57,25 +49,22 @@ GRAPHQL_STOP_TEMPLATE = """
   }
 """
 GRAPHQL_QUAY_TEMPLATE = """
-  quays(ids:[$quays]) {
+  quays(ids: $quays) {
     id
     name
     publicCode
     latitude
     longitude
     estimatedCalls(
-        $additionalOptions
-        startTime: \"$time\",
-        numberOfDepartures: 2) {
+        whiteListed: $whitelist,
+        omitNonBoarding: $omitNonBoarding,
+        numberOfDepartures: $numberOfDepartures) {
       realtime
       aimedArrivalTime
       aimedDepartureTime
       expectedArrivalTime
       expectedDepartureTime
       requestStop
-      notices {
-        text
-      }
       destinationDisplay {
         frontText
       }

@@ -21,6 +21,4 @@ CONF_LOCATION = 'location'
 CONF_LATITUDE = 'latitude'
 CONF_LONGITUDE = 'longitude'
 
-UNKNOWN = 'Unknown'
-
 LINE_WHITELIST_FORMAT = "whiteListed: {{ lines: [{}] }},"
