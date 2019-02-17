@@ -10,7 +10,7 @@ import logging
 from enturclient.queries import *
 from enturclient.consts import *
 
-RESOURCE = 'https://api.entur.org/journeyplanner/2.0/index/graphql'
+RESOURCE = 'https://api.entur.io/journey-planner/v2/graphql'
 _LOGGER = logging.getLogger(__name__)
 
 
