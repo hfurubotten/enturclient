@@ -8,21 +8,22 @@ Python client for fetching estimated departures from stop places in Norway from 
 
 ```python
 from enturclient import EnturPublicTransportData
-import enturclient.consts
 
-API_CLIENT_ID = 'awesome-company-application'
+API_CLIENT_ID = 'awesome_company-my_application' 
 
 stops = ['NSR:StopPlace:548']
 quays = ['NSR:Quay:48550']
 data = EnturPublicTransportData(
-        API_CLIENT_ID,
-        stops,
-        quays,
-        False)
+        client_name=API_CLIENT_ID,
+        stops=stops,
+        quays=quays,
+        expand_quays=False,
+        omit_non_boarding=True,
+        number_of_departures=5)
 data.update()
 
 bergen_train = data.get_stop_info('NSR:StopPlace:548')
-bergen_train_delay = bergen[consts.ATTR][consts.ATTR_DELAY]
+bergen_train_delay = bergen_train.estimated_calls[0].delay
 ```
 
 ## Obtaining a stop id

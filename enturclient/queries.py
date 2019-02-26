@@ -26,25 +26,7 @@ GRAPHQL_STOP_TEMPLATE = """
         whiteListed: $whitelist,
         omitNonBoarding: $omitNonBoarding,
         numberOfDepartures: $numberOfDepartures) {
-      realtime
-      aimedArrivalTime
-      aimedDepartureTime
-      expectedArrivalTime
-      expectedDepartureTime
-      requestStop
-      destinationDisplay {
-        frontText
-      }
-      serviceJourney {
-        journeyPattern {
-          line {
-            id
-            name
-            transportMode
-            publicCode
-          }
-        }
-      }
+      ...callData
     }
   }
 """
@@ -59,25 +41,28 @@ GRAPHQL_QUAY_TEMPLATE = """
         whiteListed: $whitelist,
         omitNonBoarding: $omitNonBoarding,
         numberOfDepartures: $numberOfDepartures) {
-      realtime
-      aimedArrivalTime
-      aimedDepartureTime
-      expectedArrivalTime
-      expectedDepartureTime
-      requestStop
-      destinationDisplay {
-        frontText
-      }
-      serviceJourney {
-        journeyPattern {
-          line {
-            id
-            name
-            transportMode
-            publicCode
-          }
-        }
+      ...callData
+    }
+  }
+"""
+GRAPHQL_CALL_FRAGMENT = """
+fragment callData on EstimatedCall {
+  realtime
+  aimedArrivalTime
+  aimedDepartureTime
+  expectedArrivalTime
+  expectedDepartureTime
+  destinationDisplay {
+    frontText
+  }
+  serviceJourney {
+    journeyPattern {
+      line {
+        id
+        transportMode
+        publicCode
       }
     }
   }
+}
 """
