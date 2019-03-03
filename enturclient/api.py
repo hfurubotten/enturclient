@@ -1,7 +1,9 @@
 """
 Real-time information about public transport departures in Norway.
 """
-import requests
+import asyncio
+import async_timeout
+import aiohttp
 import logging
 
 from enturclient.queries import *
@@ -16,29 +18,30 @@ class EnturPublicTransportData:
 
     def __init__(self,
                  client_name: str,
-                 stops: list,
-                 quays: list,
-                 expand_quays: bool,
+                 stops: list = None,
+                 quays: list = None,
                  line_whitelist: list = None,
                  omit_non_boarding: bool = True,
-                 number_of_departures: int = 2):
+                 number_of_departures: int = 2,
+                 web_session: aiohttp.ClientSession = None):
         """Initialize the data object."""
+        if web_session is None:
+            async def _create_session() -> aiohttp.ClientSession():
+                return aiohttp.ClientSession()
+            loop = asyncio.get_event_loop()
+            self.web_session = loop.run_until_complete(_create_session())
+        else:
+            self.web_session = web_session
+
         self._client_name = client_name
         self._data = {}
         self.stops = stops
+        self.quays = quays
         self.omit_non_boarding = omit_non_boarding
         self.line_whitelist = line_whitelist
         self.number_of_departures = number_of_departures
 
-        self.quays = quays
-        if expand_quays:
-            self._expand_all_quays()
-
         self.info = {}
-        for item in stops:
-            self.info[item] = Place({}, False)
-        for item in quays:
-            self.info[item] = Place({}, True)
 
         self.template_string = """query(
             $stops: [String],
@@ -53,6 +56,10 @@ class EnturPublicTransportData:
         self.template_string += "}"
         self.template_string += GRAPHQL_CALL_FRAGMENT
 
+    async def close_connection(self):
+        """Close the aiohttp session."""
+        await self.web_session.close()
+
     def all_stop_places_quays(self) -> list:
         """Get all stop places and quays"""
         all_places = self.stops.copy()
@@ -60,28 +67,31 @@ class EnturPublicTransportData:
             all_places.append(quay)
         return all_places
 
-    def _expand_all_quays(self) -> None:
+    async def expand_all_quays(self) -> None:
         """Find all quays from stop places."""
         if not self.stops:
             return
 
-        headers = {'ET-Client-Name': self._client_name}
-        response = requests.post(
-            RESOURCE,
-            json={
-                'query': GRAPHQL_STOP_TO_QUAY_TEMPLATE,
-                'variables': {
-                    'stops': self.stops,
-                    'omitNonBoarding': self.omit_non_boarding
-                }
-            },
-            timeout=10,
-            headers=headers)
+        headers = {'ET-Client-Name': self._client_name }
+        request = {
+            'query': GRAPHQL_STOP_TO_QUAY_TEMPLATE,
+            'variables': {
+                'stops': self.stops,
+                'omitNonBoarding': self.omit_non_boarding
+            }
+        }
 
-        if response.status_code != 200:
-            return
+        with async_timeout.timeout(10):
+            resp = await self.web_session.post(RESOURCE,
+                                               json=request,
+                                               headers=headers)
 
-        result = response.json()
+        if resp.status != 200:
+            _LOGGER.error(
+                "Error connecting to Entur, response http status code: %s",
+                resp.status)
+            return None
+        result = await resp.json()
 
         if 'errors' in result:
             return
@@ -92,30 +102,34 @@ class EnturPublicTransportData:
                     if quay['estimatedCalls']:
                         self.quays.append(quay['id'])
 
-    def update(self) -> None:
+    async def update(self) -> None:
         """Get the latest data from api.entur.org."""
         headers = {'ET-Client-Name': self._client_name}
-        response = requests.post(
-            RESOURCE,
-            json={
-                'query': self.template_string,
-                'variables': {
-                    'stops': self.stops,
-                    'quays': self.quays,
-                    'whitelist': {
-                        'lines': self.line_whitelist
-                    },
-                    'numberOfDepartures': self.number_of_departures,
-                    'omitNonBoarding': self.omit_non_boarding
-                }
-            },
-            timeout=10,
-            headers=headers)
+        request = {
+            'query': self.template_string,
+            'variables': {
+                'stops': self.stops,
+                'quays': self.quays,
+                'whitelist': {
+                    'lines': self.line_whitelist
+                },
+                'numberOfDepartures': self.number_of_departures,
+                'omitNonBoarding': self.omit_non_boarding
+            }
+        }
 
-        if response.status_code != 200:
-            return
+        with async_timeout.timeout(10):
+            resp = await self.web_session.post(RESOURCE,
+                                               json=request,
+                                               headers=headers)
 
-        result = response.json()
+        if resp.status != 200:
+            _LOGGER.error(
+                "Error connecting to Entur, response http status code: %s",
+                resp.status)
+            return None
+
+        result = await resp.json()
 
         if 'errors' in result:
             _LOGGER.warning("Entur API responded with error message: {error}",
