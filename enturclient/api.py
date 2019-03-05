@@ -2,12 +2,13 @@
 Real-time information about public transport departures in Norway.
 """
 import asyncio
-import async_timeout
-import aiohttp
 import logging
 
-from enturclient.queries import *
+import aiohttp
+import async_timeout
+
 from enturclient.dto import *
+from enturclient.queries import *
 
 RESOURCE = 'https://api.entur.io/journey-planner/v2/graphql'
 _LOGGER = logging.getLogger(__name__)
@@ -43,18 +44,22 @@ class EnturPublicTransportData:
 
         self.info = {}
 
-        self.template_string = """query(
+    def get_gql_query(self):
+        """Generate GraphQL query"""
+        template_string = """query(
             $stops: [String],
             $quays: [String],
             $whitelist: InputWhiteListed,
             $numberOfDepartures: Int = 2,
             $omitNonBoarding: Boolean = true){\n"""
         if self.stops:
-            self.template_string += GRAPHQL_STOP_TEMPLATE
+            template_string += GRAPHQL_STOP_TEMPLATE
         if self.quays:
-            self.template_string += GRAPHQL_QUAY_TEMPLATE
-        self.template_string += "}"
-        self.template_string += GRAPHQL_CALL_FRAGMENT
+            template_string += GRAPHQL_QUAY_TEMPLATE
+        template_string += "}"
+        template_string += GRAPHQL_CALL_FRAGMENT
+
+        return template_string
 
     async def close_connection(self):
         """Close the aiohttp session."""
@@ -72,7 +77,7 @@ class EnturPublicTransportData:
         if not self.stops:
             return
 
-        headers = {'ET-Client-Name': self._client_name }
+        headers = {'ET-Client-Name': self._client_name}
         request = {
             'query': GRAPHQL_STOP_TO_QUAY_TEMPLATE,
             'variables': {
@@ -106,7 +111,7 @@ class EnturPublicTransportData:
         """Get the latest data from api.entur.org."""
         headers = {'ET-Client-Name': self._client_name}
         request = {
-            'query': self.template_string,
+            'query': self.get_gql_query(),
             'variables': {
                 'stops': self.stops,
                 'quays': self.quays,
@@ -148,7 +153,7 @@ class EnturPublicTransportData:
 
     def get_stop_info(self, stop_id: str) -> Place:
         """Get all information about a stop."""
-        return self.info[stop_id]
+        return self.info.get(stop_id)
 
     def _process_place(self, place: dict, is_platform: bool) -> None:
         """Extract information from place dictionary."""
