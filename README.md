@@ -14,7 +14,7 @@ import aiohttp
 import asyncio
 from enturclient import EnturPublicTransportData
 
-API_CLIENT_ID = 'awesome_company-my_application' 
+API_CLIENT_ID = 'awesome_company - my_application' 
         
 async def print_bergen_train_delay():
     async with aiohttp.ClientSession() as client:
@@ -35,16 +35,17 @@ async def print_bergen_train_delay():
         bergen_train_delay = bergen_train.estimated_calls[0].delay_in_min
         
         print(bergen_train_delay)
-    
-loop = asyncio.get_event_loop()
-loop.run_until_complete(print_bergen_train_delay())
+
+asyncio.run(print_bergen_train_delay())
 ```
 
 ## Obtaining a stop id
- [Entur's travel planer](https://en-tur.no) has a map of all stops used in Norway. Use the map to find the stops you're interested in. When you have found one of your stops, click on it. 
- Now the web browser should contain an URL with the id in it. Such as this: 
- `https://en-tur.no/nearby-stop-place-detail?id=NSR:StopPlace:32376`
- The stop id is the content after id= parameter in the url. Copy paste this into the configuration. 
+[Entur's travel planer](https://en-tur.no) has a map of all stops used in Norway. Use the map to find the stops you're interested in. When you have found one of your stops, click on it, and hit "Se alle avganger". 
+
+Now the web browser should contain an URL with the id in it. Such as this: 
+`https://en-tur.no/nearby-stop-place-detail?id=NSR:StopPlace:32376`
+
+The stop id is the content after `id=` parameter in the url. Copy paste this into the configuration. 
 
 [buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg
 [buymeacoffee]: https://www.buymeacoffee.com/heine
