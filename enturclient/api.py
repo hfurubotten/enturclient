@@ -151,6 +151,21 @@ class EnturPublicTransportData:
             for quay in self._data["quays"]:
                 self._process_place(quay, True)
 
+        # find rate limits
+        rate_limit_allowed = resp.headers.get("Rate-Limit-Allowed")
+        rate_limit_available = resp.headers.get("Rate-Limit-Available")
+        rate_limit_expiry_time = resp.headers.get("Rate-Limit-Expiry-Time")
+        rate_limit_range = resp.headers.get("Rate-Limit-Range")
+        rate_limit_used = resp.headers.get("Rate-Limit-Used")
+        _LOGGER.debug(
+            "Used %s of total %s in rate limits. Still %s available for use within time unit %s. Current rate limit expire at %s.",
+            rate_limit_used,
+            rate_limit_allowed,
+            rate_limit_available,
+            rate_limit_range,
+            rate_limit_expiry_time,
+        )
+
     def get_stop_info(self, stop_id: str) -> Place:
         """Get all information about a stop."""
         return self.info.get(stop_id)
