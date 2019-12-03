@@ -1,14 +1,16 @@
 GRAPHQL_STOP_TO_QUAY_TEMPLATE = """
 query(
-    $stops: [String]!, 
+    $stops: [String]!,
+    $whitelist: InputWhiteListed,
     $omitNonBoarding: Boolean = true){
   stopPlaces(ids: $stops) {
     id
     quays(filterByInUse: true){
       id
       estimatedCalls(
-          timeRange: 172100, 
+          timeRange: 172100,
           numberOfDepartures: 1,
+          whiteListed: $whitelist,
           omitNonBoarding: $omitNonBoarding){
         destinationDisplay {
           frontText

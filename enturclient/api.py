@@ -10,25 +10,29 @@ import async_timeout
 from enturclient.dto import *
 from enturclient.queries import *
 
-RESOURCE = 'https://api.entur.io/journey-planner/v2/graphql'
+RESOURCE = "https://api.entur.io/journey-planner/v2/graphql"
 _LOGGER = logging.getLogger(__name__)
 
 
 class EnturPublicTransportData:
     """The Class for handling the data retrieval."""
 
-    def __init__(self,
-                 client_name: str,
-                 stops: list = None,
-                 quays: list = None,
-                 line_whitelist: list = None,
-                 omit_non_boarding: bool = True,
-                 number_of_departures: int = 2,
-                 web_session: aiohttp.ClientSession = None):
+    def __init__(
+        self,
+        client_name: str,
+        stops: list = None,
+        quays: list = None,
+        line_whitelist: list = None,
+        omit_non_boarding: bool = True,
+        number_of_departures: int = 2,
+        web_session: aiohttp.ClientSession = None,
+    ):
         """Initialize the data object."""
         if web_session is None:
+
             async def _create_session() -> aiohttp.ClientSession():
                 return aiohttp.ClientSession()
+
             loop = asyncio.get_event_loop()
             self.web_session = loop.run_until_complete(_create_session())
         else:
@@ -77,79 +81,90 @@ class EnturPublicTransportData:
         if not self.stops:
             return
 
-        headers = {'ET-Client-Name': self._client_name}
+        headers = {"ET-Client-Name": self._client_name}
         request = {
-            'query': GRAPHQL_STOP_TO_QUAY_TEMPLATE,
-            'variables': {
-                'stops': self.stops,
-                'omitNonBoarding': self.omit_non_boarding
-            }
+            "query": GRAPHQL_STOP_TO_QUAY_TEMPLATE,
+            "variables": {
+                "stops": self.stops,
+                "whitelist": {"lines": self.line_whitelist},
+                "omitNonBoarding": self.omit_non_boarding,
+            },
         }
 
         with async_timeout.timeout(10):
-            resp = await self.web_session.post(RESOURCE,
-                                               json=request,
-                                               headers=headers)
+            resp = await self.web_session.post(RESOURCE, json=request, headers=headers)
 
         if resp.status != 200:
             _LOGGER.error(
-                "Error connecting to Entur, response http status code: %s",
-                resp.status)
+                "Error connecting to Entur, response http status code: %s", resp.status
+            )
             return None
         result = await resp.json()
 
-        if 'errors' in result:
+        if "errors" in result:
             return
 
-        for stop_place in result['data']['stopPlaces']:
-            if len(stop_place['quays']) > 1:
-                for quay in stop_place['quays']:
-                    if quay['estimatedCalls']:
-                        self.quays.append(quay['id'])
+        for stop_place in result["data"]["stopPlaces"]:
+            if len(stop_place["quays"]) > 1:
+                for quay in stop_place["quays"]:
+                    if quay["estimatedCalls"]:
+                        self.quays.append(quay["id"])
 
     async def update(self) -> None:
         """Get the latest data from api.entur.org."""
-        headers = {'ET-Client-Name': self._client_name}
+        headers = {"ET-Client-Name": self._client_name}
         request = {
-            'query': self.get_gql_query(),
-            'variables': {
-                'stops': self.stops,
-                'quays': self.quays,
-                'whitelist': {
-                    'lines': self.line_whitelist
-                },
-                'numberOfDepartures': self.number_of_departures,
-                'omitNonBoarding': self.omit_non_boarding
-            }
+            "query": self.get_gql_query(),
+            "variables": {
+                "stops": self.stops,
+                "quays": self.quays,
+                "whitelist": {"lines": self.line_whitelist},
+                "numberOfDepartures": self.number_of_departures,
+                "omitNonBoarding": self.omit_non_boarding,
+            },
         }
 
         with async_timeout.timeout(10):
-            resp = await self.web_session.post(RESOURCE,
-                                               json=request,
-                                               headers=headers)
+            resp = await self.web_session.post(RESOURCE, json=request, headers=headers)
 
         if resp.status != 200:
             _LOGGER.error(
-                "Error connecting to Entur, response http status code: %s",
-                resp.status)
+                "Error connecting to Entur, response http status code: %s", resp.status
+            )
             return None
 
         result = await resp.json()
 
-        if 'errors' in result:
-            _LOGGER.warning("Entur API responded with error message: {error}",
-                            result['errors'])
+        if "errors" in result:
+            _LOGGER.warning(
+                "Entur API responded with error message: %s", result["errors"]
+            )
             return
 
-        self._data = result['data']
+        self._data = result["data"]
 
-        if 'stopPlaces' in self._data:
-            for stop in self._data['stopPlaces']:
+        if "stopPlaces" in self._data:
+            for stop in self._data["stopPlaces"]:
                 self._process_place(stop, False)
 
-        if 'quays' in self._data:
-            for quay in self._data['quays']:
+        if "quays" in self._data:
+            for quay in self._data["quays"]:
                 self._process_place(quay, True)
+
+        # find rate limits
+        rate_limit_allowed = resp.headers.get("Rate-Limit-Allowed")
+        rate_limit_available = resp.headers.get("Rate-Limit-Available")
+        rate_limit_expiry_time = resp.headers.get("Rate-Limit-Expiry-Time")
+        rate_limit_range = resp.headers.get("Rate-Limit-Range")
+        rate_limit_used = resp.headers.get("Rate-Limit-Used")
+        _LOGGER.debug(
+            "Used %s of total %s in rate limits. Still %s available for use within time unit %s. Current rate limit expire at %s.",
+            rate_limit_used,
+            rate_limit_allowed,
+            rate_limit_available,
+            rate_limit_range,
+            rate_limit_expiry_time,
+        )
 
     def get_stop_info(self, stop_id: str) -> Place:
         """Get all information about a stop."""
@@ -157,5 +172,5 @@ class EnturPublicTransportData:
 
     def _process_place(self, place: dict, is_platform: bool) -> None:
         """Extract information from place dictionary."""
-        place_id = place['id']
+        place_id = place["id"]
         self.info[place_id] = Place(place, is_platform)
