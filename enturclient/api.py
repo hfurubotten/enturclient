@@ -86,7 +86,7 @@ class EnturPublicTransportData:
             "query": GRAPHQL_STOP_TO_QUAY_TEMPLATE,
             "variables": {
                 "stops": self.stops,
-                "whitelist": self.line_whitelist,
+                "whitelist": {"lines": self.line_whitelist},
                 "omitNonBoarding": self.omit_non_boarding,
             },
         }
@@ -137,7 +137,7 @@ class EnturPublicTransportData:
 
         if "errors" in result:
             _LOGGER.warning(
-                "Entur API responded with error message: {error}", result["errors"]
+                "Entur API responded with error message: %s", result["errors"]
             )
             return
 
