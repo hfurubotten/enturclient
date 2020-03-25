@@ -23,10 +23,9 @@ class Place:
         if self.is_platform:
             if self.public_code:
                 return self._data["name"] + " Platform " + self.public_code
-            else:
-                return self._data["name"] + " Platform " + self.place_id.split(":")[-1]
-        else:
-            return self._data["name"]
+            return self._data["name"] + " Platform " + self.place_id.split(":")[-1]
+
+        return self._data["name"]
 
     @property
     def latitude(self) -> Optional[float]:

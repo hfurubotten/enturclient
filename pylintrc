@@ -1,0 +1,7 @@
+[MESSAGES CONTROL]
+disable=
+    duplicate-code,
+    format,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-instance-attributes
