@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "enturclient"
+version = "0.2.2"
+description = "An API client for public transport data from Entur."
+authors = ["Heine Furubotten <hfurubotten@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/hfurubotten/enturclient"
+repository = "https://github.com/hfurubotten/enturclient"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+aiohttp = "^3.6.1"
+async_timeout = "^3.0.1"
+
+[tool.poetry.dev-dependencies]
+asynctest = "^0.13.0"
+black = "^19.10b0"
+isort = "^4.3.21"
+mypy = "^0.770"
+pylint = "^2.4.4"
+pydocstyle = "^5.0.2"
+pytest = "^5.4.1"
+pytest-cov = "^2.8.1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
