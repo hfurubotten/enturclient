@@ -14,3 +14,4 @@ steps:
   - bash: |
       source $HOME/.poetry/env
       poetry install
+    displayName: poetry install
