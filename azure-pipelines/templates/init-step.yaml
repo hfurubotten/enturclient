@@ -8,7 +8,9 @@ steps:
     displayName: Use Python ${{ parameters.python_version }}
     inputs:
       versionSpec: ${{ parameters.python_version }}
-
   - bash: |
       curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
     displayName: Install poetry
+  - bash: |
+      source $HOME/.poetry/env
+      poetry install
