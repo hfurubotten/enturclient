@@ -29,3 +29,9 @@ steps:
     inputs:
       testResultsFiles: "**/test-*.xml"
       testRunTitle: Test results
+  - task: PublishCodeCoverageResults@1
+    displayName: Publish coverage results
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/coverage.xml"
+      reportDirectory: "$(System.DefaultWorkingDirectory)/**/htmlcov"
