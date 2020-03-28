@@ -2,7 +2,7 @@ trigger:
   - master
   - develop
 
-# pr: none
+pr: none
 
 pool:
   vmImage: "ubuntu-latest"
@@ -66,20 +66,20 @@ jobs:
         displayName: "Twine Authenticate"
         inputs:
           pythonUploadServiceConnection: "pypi"
-      # - script: 'twine upload -r "pypi" --config-file $(PYPIRC_PATH) dist/*'
-      #   displayName: Upload to PyPi
-      #
-      # - task: GitHubRelease@1
-      #   displayName: Github Release
-      #   inputs:
-      #     gitHubConnection: "github"
-      #     repositoryName: "$(Build.Repository.Name)"
-      #     action: "edit" # allows reruns of this task, creates if does not exists.
-      #     target: "$(Build.SourceVersion)"
-      #     tag: "v$(versionNumber)"
-      #     title: "$(versionName)"
-      #     releaseNotesSource: "inline"
-      #     assets: "$(Build.SourcesDirectory)/dist/*"
-      #     isPreRelease: $(isBeta)
-      #     changeLogCompareToRelease: "lastFullRelease"
-      #     changeLogType: "commitBased"
+      - script: 'twine upload -r "pypi" --config-file $(PYPIRC_PATH) dist/*'
+        displayName: Upload to PyPi
+
+      - task: GitHubRelease@1
+        displayName: Github Release
+        inputs:
+          gitHubConnection: "github"
+          repositoryName: "$(Build.Repository.Name)"
+          action: "edit" # allows reruns of this task, creates if does not exists.
+          target: "$(Build.SourceVersion)"
+          tag: "v$(versionNumber)"
+          title: "$(versionName)"
+          releaseNotesSource: "inline"
+          assets: "$(Build.SourcesDirectory)/dist/*"
+          isPreRelease: $(isBeta)
+          changeLogCompareToRelease: "lastFullRelease"
+          changeLogType: "commitBased"
