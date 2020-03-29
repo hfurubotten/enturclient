@@ -1,0 +1,17 @@
+parameters:
+  - name: python_version
+    default: "3.7.x"
+    type: string
+
+steps:
+  - task: UsePythonVersion@0
+    displayName: Use Python ${{ parameters.python_version }}
+    inputs:
+      versionSpec: ${{ parameters.python_version }}
+  - bash: |
+      curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+    displayName: Install poetry
+  - bash: |
+      source $HOME/.poetry/env
+      poetry install
+    displayName: poetry install

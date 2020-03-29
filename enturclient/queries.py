@@ -1,3 +1,5 @@
+"""GraphQL query templates."""
+
 GRAPHQL_STOP_TO_QUAY_TEMPLATE = """
 query(
     $stops: [String]!,

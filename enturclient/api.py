@@ -19,9 +19,9 @@ class EnturPublicTransportData:
     def __init__(
         self,
         client_name: str,
-        stops: list = [],
-        quays: list = [],
-        line_whitelist: list = [],
+        stops: list = None,
+        quays: list = None,
+        line_whitelist: list = None,
         omit_non_boarding: bool = True,
         number_of_departures: int = 2,
         web_session: aiohttp.ClientSession = None,
@@ -39,10 +39,10 @@ class EnturPublicTransportData:
 
         self._client_name = client_name
         self._data: dict = {}
-        self.stops = stops
-        self.quays = quays
+        self.stops = stops or []
+        self.quays = quays or []
         self.omit_non_boarding = omit_non_boarding
-        self.line_whitelist = line_whitelist
+        self.line_whitelist = line_whitelist or []
         self.number_of_departures = number_of_departures
 
         self.info: dict = {}
@@ -127,7 +127,7 @@ class EnturPublicTransportData:
 
         with async_timeout.timeout(10):
             async with self.web_session.post(
-                RESOURCE, json=request, headers=headers,
+                RESOURCE, json=request, headers=headers
             ) as resp:
                 if resp.status != 200:
                     _LOGGER.error(

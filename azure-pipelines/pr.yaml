@@ -1,0 +1,35 @@
+trigger: none
+
+pool:
+  vmImage: "ubuntu-latest"
+
+jobs:
+  - job: lint_and_format
+    displayName: Lint and Format
+    workspace:
+      clean: all
+    steps:
+      - template: templates/init-step.yaml
+      - bash: |
+          source $HOME/.poetry/env
+          poetry run black . --check --diff
+        displayName: Black check
+      - bash: |
+          source $HOME/.poetry/env
+          poetry run isort --check-only
+        displayName: Import sorting
+      - bash: |
+          source $HOME/.poetry/env
+          poetry run pylint enturclient
+        displayName: Linting
+      - bash: |
+          source $HOME/.poetry/env
+          poetry run mypy enturclient --ignore-missing-imports --follow-imports=silent --warn-redundant-casts --warn-unused-configs --strict-equality
+        displayName: Typing checks
+  - job: tests
+    displayName: Tests
+    workspace:
+      clean: all
+    steps:
+      - template: templates/init-step.yaml
+      - template: templates/pytest.yaml
