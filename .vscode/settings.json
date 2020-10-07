@@ -6,7 +6,6 @@
   "python.linting.pylintEnabled": true,
   "python.testing.pytestEnabled": true,
   "python.poetryPath": "poetry",
-  "python.pythonPath": ".venv\\Scripts\\python.exe",
   "markdownlint.run": "onType",
   "markdownlint.config": {
     "MD013": false,

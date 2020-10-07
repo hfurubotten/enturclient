@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="enturclient",
     version="0.2.2",
-    python_requires=">=3.6.10",
+    python_requires=">=3.7",
     author="Heine Furubotten",
     description="An API client for public transport data from Entur.",
     long_description=long_description,

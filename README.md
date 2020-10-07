@@ -1,6 +1,6 @@
 # Entur API client
 
-Python client for fetching estimated departures from stop places in Norway from Entur.org's API. Information about stop places, platforms and real-time departures.
+Python client for fetching estimated departures from stop places in Norway from [`entur.org`](https://developer.entur.org) API. Information about stop places, platforms and real-time departures.
 
 [![PyPI version fury.io][pypi-version-badge]][pypi-enturclient]
 [![PyPI pyversions][py-versions-badge]][pypi-enturclient]
