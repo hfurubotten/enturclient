@@ -16,7 +16,7 @@ jobs:
         displayName: Black check
       - bash: |
           source $HOME/.poetry/env
-          poetry run isort --check-only
+          poetry run isort . --check
         displayName: Import sorting
       - bash: |
           source $HOME/.poetry/env
