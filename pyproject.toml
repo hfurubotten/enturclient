@@ -12,23 +12,31 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-include = ["tests/**"]
+include = [
+    { path = "tests", format = "sdist" },
+]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-aiohttp = "^3.6.1"
+python = "^3.8"
+aiohttp = "^3.7.4"
 async_timeout = "^3.0.1"
 
 [tool.poetry.dev-dependencies]
 asynctest = "^0.13.0"
-black = "^19.10b0"
-isort = "^4.3.21"
-mypy = "^0.770"
-pylint = "^2.4.4"
-pydocstyle = "^5.0.2"
-pytest = "^5.4.1"
-pytest-cov = "^2.8.1"
+black = "^21.6b0"
+isort = "^5.8.0"
+mypy = "^0.902"
+pylint = "^2.8.3"
+pydocstyle = "^6.0.0"
+pytest = "^6.2.4"
+pytest-cov = "^2.12.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+target-version = ["py38"]
