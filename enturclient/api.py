@@ -90,7 +90,7 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(10):
+        with async_timeout.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:
@@ -101,8 +101,12 @@ class EnturPublicTransportData:
                     )
                     return
                 result = await resp.json()
+        _LOGGER.debug("Got the following result from entur: %s", result)
 
         if "errors" in result:
+            _LOGGER.warning(
+                "Entur API responded with error message: %s", result["errors"]
+            )
             return
 
         for stop_place in result["data"]["stopPlaces"]:
@@ -110,6 +114,8 @@ class EnturPublicTransportData:
                 for quay in stop_place["quays"]:
                     if quay["estimatedCalls"]:
                         self.quays.append(quay["id"])
+
+        _LOGGER.debug("Found the following queys after expansion: %s", self.quays)
 
     async def update(self) -> None:
         """Get the latest data from api.entur.org."""
@@ -125,7 +131,7 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(10):
+        with async_timeout.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:
@@ -136,6 +142,7 @@ class EnturPublicTransportData:
                     )
                     return
                 result = await resp.json()
+        _LOGGER.debug("Got the following result from entur: %s", result)
 
         if "errors" in result:
             _LOGGER.warning(
