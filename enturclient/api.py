@@ -1,14 +1,13 @@
-"""
-Real-time information about public transport departures in Norway.
-"""
+"""Real-time information about public transport departures in Norway."""
 import asyncio
 import logging
+from typing import Optional
 
 import aiohttp
 import async_timeout
 
-from enturclient.dto import *
-from enturclient.queries import *
+import enturclient.dto as dto
+import enturclient.queries as q
 
 RESOURCE = "https://api.entur.io/journey-planner/v2/graphql"
 _LOGGER = logging.getLogger(__name__)
@@ -28,9 +27,9 @@ class EnturPublicTransportData:
         web_session: aiohttp.ClientSession = None,
     ):
         """Initialize the data object."""
-        if web_session is None:
+        if not web_session:
 
-            async def _create_session() -> aiohttp.ClientSession():
+            async def _create_session() -> aiohttp.ClientSession:
                 return aiohttp.ClientSession()
 
             loop = asyncio.get_event_loop()
@@ -39,17 +38,17 @@ class EnturPublicTransportData:
             self.web_session = web_session
 
         self._client_name = client_name
-        self._data = {}
-        self.stops = stops
-        self.quays = quays
+        self._data: dict = {}
+        self.stops = stops or []
+        self.quays = quays or []
         self.omit_non_boarding = omit_non_boarding
-        self.line_whitelist = line_whitelist
+        self.line_whitelist = line_whitelist or []
         self.number_of_departures = number_of_departures
 
-        self.info = {}
+        self.info: dict = {}
 
     def get_gql_query(self):
-        """Generate GraphQL query"""
+        """Generate GraphQL query."""
         template_string = """query(
             $stops: [String],
             $quays: [String],
@@ -57,11 +56,11 @@ class EnturPublicTransportData:
             $numberOfDepartures: Int = 2,
             $omitNonBoarding: Boolean = true){\n"""
         if self.stops:
-            template_string += GRAPHQL_STOP_TEMPLATE
+            template_string += q.GRAPHQL_STOP_TEMPLATE
         if self.quays:
-            template_string += GRAPHQL_QUAY_TEMPLATE
+            template_string += q.GRAPHQL_QUAY_TEMPLATE
         template_string += "}"
-        template_string += GRAPHQL_CALL_FRAGMENT
+        template_string += q.GRAPHQL_CALL_FRAGMENT
 
         return template_string
 
@@ -70,7 +69,7 @@ class EnturPublicTransportData:
         await self.web_session.close()
 
     def all_stop_places_quays(self) -> list:
-        """Get all stop places and quays"""
+        """Get all stop places and quays."""
         all_places = self.stops.copy()
         for quay in self.quays:
             all_places.append(quay)
@@ -83,7 +82,7 @@ class EnturPublicTransportData:
 
         headers = {"ET-Client-Name": self._client_name}
         request = {
-            "query": GRAPHQL_STOP_TO_QUAY_TEMPLATE,
+            "query": q.GRAPHQL_STOP_TO_QUAY_TEMPLATE,
             "variables": {
                 "stops": self.stops,
                 "whitelist": {"lines": self.line_whitelist},
@@ -91,17 +90,23 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(10):
-            resp = await self.web_session.post(RESOURCE, json=request, headers=headers)
-
-        if resp.status != 200:
-            _LOGGER.error(
-                "Error connecting to Entur, response http status code: %s", resp.status
-            )
-            return None
-        result = await resp.json()
+        with async_timeout.timeout(15):
+            async with self.web_session.post(
+                RESOURCE, json=request, headers=headers
+            ) as resp:
+                if resp.status != 200:
+                    _LOGGER.error(
+                        "Error connecting to Entur, response http status code: %s",
+                        resp.status,
+                    )
+                    return
+                result = await resp.json()
+        _LOGGER.debug("Got the following result from entur: %s", result)
 
         if "errors" in result:
+            _LOGGER.warning(
+                "Entur API responded with error message: %s", result["errors"]
+            )
             return
 
         for stop_place in result["data"]["stopPlaces"]:
@@ -109,6 +114,8 @@ class EnturPublicTransportData:
                 for quay in stop_place["quays"]:
                     if quay["estimatedCalls"]:
                         self.quays.append(quay["id"])
+
+        _LOGGER.debug("Found the following queys after expansion: %s", self.quays)
 
     async def update(self) -> None:
         """Get the latest data from api.entur.org."""
@@ -124,16 +131,18 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(10):
-            resp = await self.web_session.post(RESOURCE, json=request, headers=headers)
-
-        if resp.status != 200:
-            _LOGGER.error(
-                "Error connecting to Entur, response http status code: %s", resp.status
-            )
-            return None
-
-        result = await resp.json()
+        with async_timeout.timeout(15):
+            async with self.web_session.post(
+                RESOURCE, json=request, headers=headers
+            ) as resp:
+                if resp.status != 200:
+                    _LOGGER.error(
+                        "Error connecting to Entur, response http status code: %s",
+                        resp.status,
+                    )
+                    return
+                result = await resp.json()
+        _LOGGER.debug("Got the following result from entur: %s", result)
 
         if "errors" in result:
             _LOGGER.warning(
@@ -166,11 +175,11 @@ class EnturPublicTransportData:
             rate_limit_expiry_time,
         )
 
-    def get_stop_info(self, stop_id: str) -> Place:
+    def get_stop_info(self, stop_id: str) -> Optional[dto.Place]:
         """Get all information about a stop."""
         return self.info.get(stop_id)
 
     def _process_place(self, place: dict, is_platform: bool) -> None:
         """Extract information from place dictionary."""
         place_id = place["id"]
-        self.info[place_id] = Place(place, is_platform)
+        self.info[place_id] = dto.Place(place, is_platform)

@@ -1,0 +1,85 @@
+trigger:
+  - master
+  - develop
+
+pr: none
+
+pool:
+  vmImage: "ubuntu-latest"
+
+jobs:
+  - job: test_and_versioning
+    displayName: Test and find versions
+    workspace:
+      clean: all
+    steps:
+      - template: templates/init-step.yaml
+      - template: templates/pytest.yaml
+      - bash: |
+          source $HOME/.poetry/env
+
+          versionName=$(poetry version)
+
+          set -- $versionName
+          versionNumber=$2
+
+          echo "##vso[task.setvariable variable=versionName;isoutput=true]${versionName}"
+          echo "##vso[task.setvariable variable=versionNumber;isoutput=true]${versionNumber}"
+        name: version
+        displayName: Fetch version numbers
+
+  - job: release
+    displayName: Release
+    dependsOn:
+      - test_and_versioning
+    variables:
+      versionName: $[dependencies.test_and_versioning.outputs['version.versionName']]
+      versionNumber: $[dependencies.test_and_versioning.outputs['version.versionNumber']]
+      betaNumber: $[counter(variables['versionNumber'], 1)]
+      isBeta: false
+    workspace:
+      clean: all
+    steps:
+      - template: templates/init-step.yaml
+      - bash: |
+          source $HOME/.poetry/env
+
+          v="$(versionNumber)-beta.$(betaNumber)"
+          poetry version $v
+
+          echo "##vso[task.setvariable variable=versionName]$(poetry version)"
+          echo "##vso[task.setvariable variable=versionNumber]${v}"
+          echo "##vso[task.setvariable variable=isBeta]true"
+        displayName: Set beta version
+        condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
+
+      - bash: |
+          source $HOME/.poetry/env
+          poetry build
+        displayName: Build package
+
+      - script: |
+          python -m pip install -U pip
+          pip install twine
+        displayName: Install twine
+      - task: TwineAuthenticate@1
+        displayName: "Twine Authenticate"
+        inputs:
+          pythonUploadServiceConnection: "pypi"
+      - script: 'twine upload -r "pypi" --config-file $(PYPIRC_PATH) dist/*'
+        displayName: Upload to PyPi
+
+      - task: GitHubRelease@1
+        displayName: Github Release
+        inputs:
+          gitHubConnection: "github"
+          repositoryName: "$(Build.Repository.Name)"
+          action: "edit" # allows reruns of this task, creates if does not exists.
+          target: "$(Build.SourceVersion)"
+          tag: "v$(versionNumber)"
+          title: "$(versionName)"
+          releaseNotesSource: "inline"
+          assets: "$(Build.SourcesDirectory)/dist/*"
+          isPreRelease: $(isBeta)
+          changeLogCompareToRelease: "lastFullRelease"
+          changeLogType: "commitBased"
