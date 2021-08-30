@@ -23,7 +23,7 @@ async_timeout = "^3.0.1"
 
 [tool.poetry.dev-dependencies]
 asynctest = "^0.13.0"
-black = "^21.6b0"
+black = "^21.8b0"
 isort = "^5.8.0"
 mypy = "^0.902"
 pylint = "^2.8.3"
