@@ -6,8 +6,8 @@ from typing import Optional
 import aiohttp
 import async_timeout
 
-from enturclient import dto
 import enturclient.queries as q
+from enturclient import dto
 
 RESOURCE = "https://api.entur.io/journey-planner/v2/graphql"
 _LOGGER = logging.getLogger(__name__)
