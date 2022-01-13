@@ -48,8 +48,7 @@ Now the web browser should contain an URL with the id in it. Such as this:
 
 The stop id is the content after `id=` parameter in the url. Copy paste this into the configuration.
 
-It's also possible to use the National Stop Register (NSR).
-Log in as "guest"/"guest" at https://stoppested.entur.org to explore the contents of NSR.
+It's also possible to use the [National Stop Register (NSR)](https://stoppested.entur.org).
 Find your stop in the map, click on it and then again at the name. You have to zoom quite a bit in before the stops shows in the map. Information about the stop place, including the stop and quay ids will pop up on the side.
 
 [buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg

@@ -68,8 +68,8 @@ class EstimatedCall:
     @property
     def front_display(self) -> str:
         """Text shown in front of the transport."""
-        return "{} {}".format(
-            self.line_public_code, self._data["destinationDisplay"]["frontText"]
+        return (
+            f"{self.line_public_code} {self._data['destinationDisplay']['frontText']}"
         )
 
     @property
