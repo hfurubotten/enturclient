@@ -47,23 +47,6 @@ class EnturPublicTransportData:
 
         self.info: dict = {}
 
-    def get_gql_query(self):
-        """Generate GraphQL query."""
-        template_string = """query(
-            $stops: [String],
-            $quays: [String],
-            $whitelist: InputWhiteListed,
-            $numberOfDepartures: Int = 2,
-            $omitNonBoarding: Boolean = true){\n"""
-        if self.stops:
-            template_string += q.GRAPHQL_STOP_TEMPLATE
-        if self.quays:
-            template_string += q.GRAPHQL_QUAY_TEMPLATE
-        template_string += "}"
-        template_string += q.GRAPHQL_CALL_FRAGMENT
-
-        return template_string
-
     async def close_connection(self):
         """Close the aiohttp session."""
         await self.web_session.close()
@@ -82,7 +65,7 @@ class EnturPublicTransportData:
 
         headers = {"ET-Client-Name": self._client_name}
         request = {
-            "query": q.GRAPHQL_STOP_TO_QUAY_TEMPLATE,
+            "query": q.GRAPHQL_STOP_TO_QUAY_QUERY,
             "variables": {
                 "stops": self.stops,
                 "whitelist": {"lines": self.line_whitelist},
@@ -121,7 +104,7 @@ class EnturPublicTransportData:
         """Get the latest data from api.entur.org."""
         headers = {"ET-Client-Name": self._client_name}
         request = {
-            "query": self.get_gql_query(),
+            "query": q.GRAPHQL_DEPARTURE_CALLS_QUERY,
             "variables": {
                 "stops": self.stops,
                 "quays": self.quays,
@@ -145,6 +128,7 @@ class EnturPublicTransportData:
         _LOGGER.debug("Got the following result from entur: %s", result)
 
         if "errors" in result:
+            _LOGGER.debug("Sent the following query to api: %s", request)
             _LOGGER.warning(
                 "Entur API responded with error message: %s", result["errors"]
             )
