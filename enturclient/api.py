@@ -9,7 +9,7 @@ import async_timeout
 import enturclient.queries as q
 from enturclient import dto
 
-RESOURCE = "https://api.entur.io/journey-planner/v2/graphql"
+RESOURCE = "https://api.entur.io/journey-planner/v3/graphql"
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -90,7 +90,7 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(15):
+        async with async_timeout.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:
@@ -131,7 +131,7 @@ class EnturPublicTransportData:
             },
         }
 
-        with async_timeout.timeout(15):
+        async with async_timeout.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:
