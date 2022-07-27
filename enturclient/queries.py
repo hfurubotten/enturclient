@@ -28,7 +28,6 @@ GRAPHQL_STOP_TEMPLATE = """
     name
     estimatedCalls(
         whiteListed: $whitelist,
-        omitNonBoarding: $omitNonBoarding,
         numberOfDepartures: $numberOfDepartures) {
       ...callData
     }
