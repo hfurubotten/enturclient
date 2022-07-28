@@ -1,6 +1,6 @@
 """GraphQL query templates."""
 
-GRAPHQL_STOP_TO_QUAY_TEMPLATE = """
+GRAPHQL_STOP_TO_QUAY_QUERY = """
 query(
     $stops: [String]!,
     $whitelist: InputWhiteListed,
@@ -28,7 +28,6 @@ GRAPHQL_STOP_TEMPLATE = """
     name
     estimatedCalls(
         whiteListed: $whitelist,
-        omitNonBoarding: $omitNonBoarding,
         numberOfDepartures: $numberOfDepartures) {
       ...callData
     }
@@ -69,4 +68,16 @@ fragment callData on EstimatedCall {
     }
   }
 }
+"""
+GRAPHQL_DEPARTURE_CALLS_QUERY = f"""
+query(
+  $stops: [String],
+  $quays: [String],
+  $whitelist: InputWhiteListed,
+  $numberOfDepartures: Int = 2,
+  $omitNonBoarding: Boolean = true){{
+    {GRAPHQL_STOP_TEMPLATE}
+    {GRAPHQL_QUAY_TEMPLATE}
+}}
+{GRAPHQL_CALL_FRAGMENT}
 """
