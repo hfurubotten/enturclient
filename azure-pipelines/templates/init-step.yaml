@@ -1,6 +1,6 @@
 parameters:
   - name: python_version
-    default: "3.8.x"
+    default: "3.11.x"
     type: string
 
 steps:
@@ -9,9 +9,9 @@ steps:
     inputs:
       versionSpec: ${{ parameters.python_version }}
   - bash: |
-      curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+      curl -sSL https://install.python-poetry.org | python3 - --version 2.4.1
+      echo "##vso[task.prependpath]$HOME/.local/bin"
     displayName: Install poetry
   - bash: |
-      source $HOME/.poetry/env
       poetry install
     displayName: poetry install

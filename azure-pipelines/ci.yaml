@@ -16,8 +16,6 @@ jobs:
       - template: templates/init-step.yaml
       - template: templates/pytest.yaml
       - bash: |
-          source $HOME/.poetry/env
-
           versionName=$(poetry version)
 
           set -- $versionName
@@ -42,8 +40,6 @@ jobs:
     steps:
       - template: templates/init-step.yaml
       - bash: |
-          source $HOME/.poetry/env
-
           v="$(versionNumber)-beta.$(betaNumber)"
           poetry version $v
 
@@ -54,7 +50,6 @@ jobs:
         condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
 
       - bash: |
-          source $HOME/.poetry/env
           poetry build
         displayName: Build package
 

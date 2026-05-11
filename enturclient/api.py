@@ -4,7 +4,6 @@ import logging
 from typing import Optional
 
 import aiohttp
-import async_timeout
 
 import enturclient.queries as q
 from enturclient import dto
@@ -73,7 +72,7 @@ class EnturPublicTransportData:
             },
         }
 
-        async with async_timeout.timeout(15):
+        async with asyncio.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:
@@ -114,7 +113,7 @@ class EnturPublicTransportData:
             },
         }
 
-        async with async_timeout.timeout(15):
+        async with asyncio.timeout(15):
             async with self.web_session.post(
                 RESOURCE, json=request, headers=headers
             ) as resp:

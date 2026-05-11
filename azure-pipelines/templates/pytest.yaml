@@ -1,6 +1,5 @@
 steps:
   - bash: |
-      source $HOME/.poetry/env
       poetry run pytest --cov=enturclient --cov-report=xml --cov-report=html --junitxml=junit/test-results.xml
     displayName: Tests
   - task: PublishTestResults@2
