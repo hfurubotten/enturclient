@@ -24,7 +24,7 @@ aiohttp = "^3.11"
 [tool.poetry.dev-dependencies]
 asynctest = "^0.13.0"
 black = "^22.6"
-isort = "^5.10.1"
+isort = "^5.13.2"
 mypy = "^0.971"
 pylint = "^2.14.5"
 pydocstyle = "^6.0.0"
