@@ -1,12 +1,14 @@
 """Real-time information about public transport departures in Norway."""
+
 import asyncio
 import logging
-from typing import Optional
+from typing import Mapping, Optional
 
 import aiohttp
 
 import enturclient.queries as q
 from enturclient import dto
+from enturclient.exceptions import EnturApiError
 
 RESOURCE = "https://api.entur.io/journey-planner/v3/graphql"
 _LOGGER = logging.getLogger(__name__)
@@ -72,30 +74,26 @@ class EnturPublicTransportData:
             },
         }
 
-        async with asyncio.timeout(15):
-            async with self.web_session.post(
-                RESOURCE, json=request, headers=headers
-            ) as resp:
-                if resp.status != 200:
-                    _LOGGER.error(
-                        "Error connecting to Entur, response http status code: %s",
-                        resp.status,
-                    )
-                    return
-                result = await resp.json()
+        result, _ = await self._async_post_json(request, headers)
         _LOGGER.debug("Got the following result from entur: %s", result)
 
-        if "errors" in result:
-            _LOGGER.warning(
-                "Entur API responded with error message: %s", result["errors"]
-            )
-            return
+        stop_places = _get_data(result).get("stopPlaces")
+        if not isinstance(stop_places, list):
+            raise EnturApiError("Invalid Journey Planner response")
 
-        for stop_place in result["data"]["stopPlaces"]:
-            if len(stop_place["quays"]) > 1:
-                for quay in stop_place["quays"]:
-                    if quay["estimatedCalls"]:
-                        self.quays.append(quay["id"])
+        for stop_place in stop_places:
+            if not isinstance(stop_place, dict):
+                continue
+            quays = stop_place.get("quays")
+            if not isinstance(quays, list) or len(quays) <= 1:
+                continue
+            for quay in quays:
+                if (
+                    isinstance(quay, dict)
+                    and quay.get("estimatedCalls")
+                    and isinstance(quay.get("id"), str)
+                ):
+                    self.quays.append(quay["id"])
 
         _LOGGER.debug("Found the following queys after expansion: %s", self.quays)
 
@@ -113,50 +111,60 @@ class EnturPublicTransportData:
             },
         }
 
-        async with asyncio.timeout(15):
-            async with self.web_session.post(
-                RESOURCE, json=request, headers=headers
-            ) as resp:
-                if resp.status != 200:
-                    _LOGGER.error(
-                        "Error connecting to Entur, response http status code: %s",
-                        resp.status,
-                    )
-                    return
-                result = await resp.json()
+        result, response_headers = await self._async_post_json(request, headers)
         _LOGGER.debug("Got the following result from entur: %s", result)
 
-        if "errors" in result:
-            _LOGGER.debug("Sent the following query to api: %s", request)
-            _LOGGER.warning(
-                "Entur API responded with error message: %s", result["errors"]
-            )
-            return
-
-        self._data = result["data"]
+        data = _get_data(result)
+        stop_places = data.get("stopPlaces", [])
+        quays = data.get("quays", [])
+        if not isinstance(stop_places, list) or not isinstance(quays, list):
+            raise EnturApiError("Invalid Journey Planner response")
+        if not stop_places and not quays:
+            raise EnturApiError("Journey Planner returned no stop places or quays")
+        self._data = data
 
         if "stopPlaces" in self._data:
-            for stop in self._data["stopPlaces"]:
+            for stop in stop_places:
                 self._process_place(stop, False)
 
         if "quays" in self._data:
-            for quay in self._data["quays"]:
+            for quay in quays:
                 self._process_place(quay, True)
 
         # find rate limits
-        rate_limit_allowed = resp.headers.get("Rate-Limit-Allowed")
-        rate_limit_available = resp.headers.get("Rate-Limit-Available")
-        rate_limit_expiry_time = resp.headers.get("Rate-Limit-Expiry-Time")
-        rate_limit_range = resp.headers.get("Rate-Limit-Range")
-        rate_limit_used = resp.headers.get("Rate-Limit-Used")
+        rate_limit_allowed = response_headers.get("Rate-Limit-Allowed")
+        rate_limit_available = response_headers.get("Rate-Limit-Available")
+        rate_limit_expiry_time = response_headers.get("Rate-Limit-Expiry-Time")
+        rate_limit_range = response_headers.get("Rate-Limit-Range")
+        rate_limit_used = response_headers.get("Rate-Limit-Used")
         _LOGGER.debug(
-            "Used %s of total %s in rate limits. Still %s available for use within time unit %s. Current rate limit expire at %s.",
+            "Used %s of total %s in rate limits. Still %s available "
+            "within time unit %s. Rate limit expires at %s.",
             rate_limit_used,
             rate_limit_allowed,
             rate_limit_available,
             rate_limit_range,
             rate_limit_expiry_time,
         )
+
+    async def _async_post_json(
+        self, request: dict, headers: dict[str, str]
+    ) -> tuple[dict, Mapping[str, str]]:
+        """Post a Journey Planner request and normalize transport errors."""
+        try:
+            async with asyncio.timeout(15):
+                async with self.web_session.post(
+                    RESOURCE, json=request, headers=headers
+                ) as resp:
+                    resp.raise_for_status()
+                    result = await resp.json()
+                    response_headers = resp.headers
+        except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+            raise EnturApiError from err
+
+        if not isinstance(result, dict):
+            raise EnturApiError("Invalid Journey Planner response")
+        return result, response_headers
 
     def get_stop_info(self, stop_id: str) -> Optional[dto.Place]:
         """Get all information about a stop."""
@@ -166,3 +174,13 @@ class EnturPublicTransportData:
         """Extract information from place dictionary."""
         place_id = place["id"]
         self.info[place_id] = dto.Place(place, is_platform)
+
+
+def _get_data(result: dict) -> dict:
+    """Validate the GraphQL envelope and return its data payload."""
+    if result.get("errors"):
+        raise EnturApiError("Journey Planner returned GraphQL errors")
+    data = result.get("data")
+    if not isinstance(data, dict):
+        raise EnturApiError("Invalid Journey Planner response")
+    return data

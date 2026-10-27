@@ -26,6 +26,8 @@ GRAPHQL_STOP_TEMPLATE = """
   stopPlaces(ids: $stops) {
     id
     name
+    latitude
+    longitude
     estimatedCalls(
         whiteListed: $whitelist,
         numberOfDepartures: $numberOfDepartures) {
@@ -80,4 +82,35 @@ query(
     {GRAPHQL_QUAY_TEMPLATE}
 }}
 {GRAPHQL_CALL_FRAGMENT}
+"""
+
+DISCOVERY_STOP_PLACE_LINES_QUERY = """
+query StopPlaceLines($stopPlaceId: String!, $numberOfDepartures: Int!) {
+  stopPlaces(ids: [$stopPlaceId]) {
+    estimatedCalls(numberOfDepartures: $numberOfDepartures) {
+      serviceJourney {
+        journeyPattern {
+          line {
+            id
+            publicCode
+            name
+            transportMode
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+DISCOVERY_STOP_PLACE_QUAYS_QUERY = """
+query StopPlaceQuays($stopPlaceId: String!) {
+  stopPlaces(ids: [$stopPlaceId]) {
+    quays(filterByInUse: true) {
+      id
+      name
+      publicCode
+    }
+  }
+}
 """

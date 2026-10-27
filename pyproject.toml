@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "enturclient"
-version = "0.3.0"
+version = "0.4.0"
 description = "An API client for public transport data from Entur."
 authors = ["Heine Furubotten <hfurubotten@users.noreply.github.com>"]
 license = "MIT"
@@ -40,3 +40,4 @@ profile = "black"
 
 [tool.black]
 target-version = ["py311"]
+
